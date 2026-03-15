@@ -247,7 +247,7 @@ switch_active() {
 check_container_health() {
     local CONTAINER_NAME="$1"
     local EXPECTED_VERSION="$2"
-    local MAX_WAIT="${3:-240}"
+    local MAX_WAIT="${3:-120}"
     local INTERVAL=5
     local ELAPSED=0
 
@@ -473,7 +473,7 @@ ensure_nas_reachable() {
 check_version() {
     local EXPECTED_VERSION=$1
     local VERSION_URL=${2:-"http://${NAS_HOST}:${DEV_PORT:-1121}/nosec/version"}
-    local MAX_WAIT=240
+    local MAX_WAIT=120
     local INTERVAL=5
     local ELAPSED=0
     echo -e "${BLUE}=== Checking version endpoint ===${NC}"
