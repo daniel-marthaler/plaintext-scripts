@@ -396,7 +396,7 @@ setup_blue_green() {
     # Start new blue-green stack
     echo -e "${BLUE}Starting blue-green stack...${NC}"
     ssh ${DEPLOY_SERVER} "cd ${DEPLOY_PATH} && \
-        sudo docker compose up -d --remove-orphans"
+        sudo docker compose up -d --pull never --remove-orphans"
 
     echo -e "${BLUE}Waiting for containers to start (30s)...${NC}"
     sleep 30
