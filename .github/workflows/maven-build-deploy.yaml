@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       build-command:
-        description: 'Build command to run after mvn deploy (e.g. "56" for release+deploy DEV+PROD, "5" for DEV only)'
+        description: 'Build command (e.g. "56" for release+deploy DEV+PROD, "5" for DEV only)'
         required: false
         type: string
         default: '56'
@@ -26,8 +26,16 @@ jobs:
         with:
           service-key: ${{ secrets.TWINGATE_SERVICE_KEY }}
 
-      - name: Checkout
+      - name: Checkout (with push access)
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MVN_DEPLOY_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.email "github@plaintext.ch"
+          git config user.name "GithubActions"
 
       - name: Checkout plaintext-scripts
         uses: actions/checkout@v4
@@ -75,11 +83,11 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq podman
 
-      - name: Maven Deploy to GitHub Packages
-        run: mvn clean deploy -DskipTests -B
-
-      - name: Build & Deploy to NAS
+      - name: Release, Build & Deploy to NAS
         if: hashFiles('Dockerfile') != '' && hashFiles('build-conf.txt') != ''
         run: |
           chmod +x ./build
           ./build ${{ inputs.build-command }}
+
+      - name: Maven Deploy to GitHub Packages (post-release SNAPSHOT)
+        run: mvn deploy -DskipTests -B
