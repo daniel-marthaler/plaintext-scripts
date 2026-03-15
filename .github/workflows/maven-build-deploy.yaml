@@ -2,6 +2,12 @@ name: Maven Build & Deploy (Reusable)
 
 on:
   workflow_call:
+    inputs:
+      build-command:
+        description: 'Build command to run after mvn deploy (e.g. "56" for release+deploy DEV+PROD, "5" for DEV only)'
+        required: false
+        type: string
+        default: '56'
     secrets:
       TWINGATE_SERVICE_KEY:
         required: true
@@ -68,9 +74,9 @@ jobs:
       - name: Maven Deploy to GitHub Packages
         run: mvn clean deploy -DskipTests -B
 
-      - name: Build & Deploy to NAS (./build 56)
+      - name: Build & Deploy to NAS
         if: hashFiles('Dockerfile') != '' && hashFiles('build-conf.txt') != ''
         run: |
           chmod +x ./build
           chmod +x ../plaintext-scripts/*.sh
-          ./build 56
+          ./build ${{ inputs.build-command }}
