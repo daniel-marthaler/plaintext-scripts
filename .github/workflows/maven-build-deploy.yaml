@@ -82,5 +82,4 @@ jobs:
         if: hashFiles('Dockerfile') != '' && hashFiles('build-conf.txt') != ''
         run: |
           chmod +x ./build
-          chmod +x ../plaintext-scripts/*.sh
           ./build ${{ inputs.build-command }}
