@@ -860,11 +860,16 @@ Includes:
         echo -e "${YELLOW}No changes to commit (maybe already committed?)${NC}"
     }
 
-    echo -e "${BLUE}Git: Creating tag v${NEW_VERSION}...${NC}"
-    git tag -a "v${NEW_VERSION}" -m "Release version ${NEW_VERSION}"
+    echo -e "${BLUE}Git: Creating tag ${NEW_VERSION}...${NC}"
+    git tag -a "${NEW_VERSION}" -m "Release version ${NEW_VERSION}"
 
-    echo -e "${BLUE}Maven: Building + deploying version ${GREEN}${NEW_VERSION}${NC}"
-    mvn clean deploy -DskipTests -B
+    if [ "${MVN_RELEASE_DEPLOY}" == "true" ]; then
+        echo -e "${BLUE}Maven: Building + deploying version ${GREEN}${NEW_VERSION}${NC}"
+        mvn clean deploy -DskipTests -B
+    else
+        echo -e "${BLUE}Maven: Building version ${GREEN}${NEW_VERSION}${NC}"
+        mvn clean package -DskipTests
+    fi
 
     ensure_podman_running || return 1
 
