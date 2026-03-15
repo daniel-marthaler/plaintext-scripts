@@ -744,7 +744,10 @@ do_build_snapshot() {
     echo -e "${BLUE}Build timestamp: ${GREEN}${BUILD_TIME}${NC}"
 
     echo -e "${BLUE}Building with Maven...${NC}"
-    mvn clean package -DskipTests
+    if ! mvn clean package -DskipTests; then
+        echo -e "${RED}✗ Maven build failed!${NC}"
+        return 1
+    fi
 
     ensure_podman_running || return 1
 
@@ -865,22 +868,37 @@ Includes:
 
     if [ "${MVN_RELEASE_DEPLOY}" == "true" ]; then
         echo -e "${BLUE}Maven: Building + deploying version ${GREEN}${NEW_VERSION}${NC}"
-        mvn clean deploy -DskipTests -B
+        if ! mvn clean deploy -DskipTests -B; then
+            echo -e "${RED}✗ Maven build failed!${NC}"
+            return 1
+        fi
     else
         echo -e "${BLUE}Maven: Building version ${GREEN}${NEW_VERSION}${NC}"
-        mvn clean package -DskipTests
+        if ! mvn clean package -DskipTests; then
+            echo -e "${RED}✗ Maven build failed!${NC}"
+            return 1
+        fi
     fi
 
     ensure_podman_running || return 1
 
     echo -e "${BLUE}Building Docker image with tags: ${GREEN}${NEW_VERSION}${BLUE} and ${GREEN}latest${NC}"
     if [[ "$CONTAINER_CLI" == *"podman"* ]]; then
-        $CONTAINER_CLI build --platform linux/amd64 --format docker -t "${IMAGE_NAME}:${NEW_VERSION}" -t "${IMAGE_NAME}:latest" .
+        if ! $CONTAINER_CLI build --platform linux/amd64 --format docker -t "${IMAGE_NAME}:${NEW_VERSION}" -t "${IMAGE_NAME}:latest" .; then
+            echo -e "${RED}✗ Docker image build failed!${NC}"
+            return 1
+        fi
     else
-        $CONTAINER_CLI build --platform linux/amd64 -t "${IMAGE_NAME}:${NEW_VERSION}" -t "${IMAGE_NAME}:latest" .
+        if ! $CONTAINER_CLI build --platform linux/amd64 -t "${IMAGE_NAME}:${NEW_VERSION}" -t "${IMAGE_NAME}:latest" .; then
+            echo -e "${RED}✗ Docker image build failed!${NC}"
+            return 1
+        fi
     fi
 
-    push_to_registry "${NEW_VERSION}"
+    if ! push_to_registry "${NEW_VERSION}"; then
+        echo -e "${RED}✗ Image push to NAS failed!${NC}"
+        return 1
+    fi
 
     echo -e "${BLUE}Maven: Preparing next SNAPSHOT version ${GREEN}${NEXT_SNAPSHOT_VERSION}${NC}"
     mvn versions:set -DnewVersion="${NEXT_SNAPSHOT_VERSION}" -DgenerateBackupPoms=false
