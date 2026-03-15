@@ -863,8 +863,8 @@ Includes:
     echo -e "${BLUE}Git: Creating tag v${NEW_VERSION}...${NC}"
     git tag -a "v${NEW_VERSION}" -m "Release version ${NEW_VERSION}"
 
-    echo -e "${BLUE}Maven: Building version ${GREEN}${NEW_VERSION}${NC}"
-    mvn clean package -DskipTests
+    echo -e "${BLUE}Maven: Building + deploying version ${GREEN}${NEW_VERSION}${NC}"
+    mvn clean deploy -DskipTests -B
 
     ensure_podman_running || return 1
 
