@@ -57,7 +57,6 @@ jobs:
           EOF
 
       - name: Setup SSH for NAS deployment
-        if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
