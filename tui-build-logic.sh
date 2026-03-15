@@ -691,7 +691,7 @@ init_versions() {
 
         echo -e "${BLUE}Committing version correction...${NC}"
         git add "$VERSION_FILE" pom.xml "*/pom.xml" 2>/dev/null || true
-        git commit -m "Auto-correct version to ${CURRENT_VERSION} (versionRelease.txt was ahead)" || true
+        git commit -m "Auto-correct version to ${CURRENT_VERSION} [skip-ci]" || true
     fi
 
     # Read release version for display
@@ -889,7 +889,7 @@ Includes:
 
     echo -e "${BLUE}Git: Committing next SNAPSHOT version...${NC}"
     git add "$VERSION_FILE" pom.xml "*/pom.xml" || true
-    git commit -m "Prepare next development iteration ${NEXT_SNAPSHOT_VERSION}"
+    git commit -m "Prepare next development iteration ${NEXT_SNAPSHOT_VERSION} [skip-ci]"
 
     echo -e "${BLUE}Git: Pushing to remote...${NC}"
     git push
