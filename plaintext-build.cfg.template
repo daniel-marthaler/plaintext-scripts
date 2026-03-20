@@ -1,0 +1,34 @@
+# ═══════════════════════════════════════════════════════════════
+#  plaintext-build.cfg - Project Build Configuration
+#
+#  Used by plaintext-scripts build system.
+#  Place this file in the project root (add to .gitignore).
+#
+#  Override any value via individual environment variable.
+#  Pass entire config via PLAINTEXT_BUILD_CONFIG env variable.
+#  Priority: individual ENV > PLAINTEXT_BUILD_CONFIG env > this file
+# ═══════════════════════════════════════════════════════════════
+
+# ── Project (required) ───────────────────────────────────────
+IMAGE_NAME=myproject
+WEBAPP_MODULE=myproject-webapp
+TUI_TITLE=MY PROJECT BUILD SYSTEM
+
+# ── Deployment ───────────────────────────────────────────────
+DEPLOY_PATH=/volume1/docker/myproject
+DEPLOY_USER=mad
+#NAS_HOST=192.168.1.224        # auto-detected by hostname if unset
+#REGISTRY_PORT=6666
+#NAS_REMOTE_TEMP=/volume1/docker/temp
+#COMPOSE_FILE=docker-compose.yaml
+
+# ── Database ─────────────────────────────────────────────────
+DB_NAME=myproject
+DB_CONTAINER_PREFIX=myproject
+
+# ── Ports ────────────────────────────────────────────────────
+DEV_PORT=1121
+#PROD_PORT=1122
+
+# ── Maven ────────────────────────────────────────────────────
+MVN_RELEASE_DEPLOY=true

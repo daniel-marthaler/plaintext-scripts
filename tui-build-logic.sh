@@ -1,30 +1,61 @@
 #!/bin/bash
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#
 # ═══════════════════════════════════════════════════════════════
 #  Build Logic Library (shared via plaintext-scripts)
 #  Business logic for build, release, deploy, and version mgmt.
 #  Sourced by: build
-#  Requires: tui-common.sh, build-conf.txt loaded
-#  Expects: SCRIPT_DIR set, cwd = SCRIPT_DIR
+#  Requires: tui-common.sh, SCRIPT_DIR set, cwd = SCRIPT_DIR
+#
+#  Configuration (priority high → low):
+#    1. Individual environment variables
+#    2. PLAINTEXT_BUILD_CONFIG env (full config content)
+#    3. plaintext-build.cfg in project directory
+#    4. build-conf.txt in project directory (legacy)
 # ═══════════════════════════════════════════════════════════════
 
-# ── Load project configuration from build-conf.txt ───────────
-if [ -f "$SCRIPT_DIR/build-conf.txt" ]; then
+# ── Load project configuration ───────────────────────────────
+# Sources: PLAINTEXT_BUILD_CONFIG env > plaintext-build.cfg > build-conf.txt
+# Individual ENV variables always take precedence over config values.
+_load_config() {
+    local config_content=""
+
+    if [ -n "${PLAINTEXT_BUILD_CONFIG:-}" ]; then
+        config_content="$PLAINTEXT_BUILD_CONFIG"
+    elif [ -f "$SCRIPT_DIR/plaintext-build.cfg" ]; then
+        config_content=$(cat "$SCRIPT_DIR/plaintext-build.cfg")
+    elif [ -f "$SCRIPT_DIR/build-conf.txt" ]; then
+        config_content=$(cat "$SCRIPT_DIR/build-conf.txt")
+    else
+        echo "ERROR: No build configuration found." >&2
+        echo "  Set PLAINTEXT_BUILD_CONFIG env or create plaintext-build.cfg in $SCRIPT_DIR" >&2
+        exit 1
+    fi
+
     while IFS='=' read -r key value; do
-        [[ "$key" =~ ^#.*$ ]] && continue
-        [[ -z "$key" ]] && continue
+        [[ "$key" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${key// }" ]] && continue
+        key="${key#"${key%%[![:space:]]*}"}"
+        key="${key%"${key##*[![:space:]]}"}"
         value="${value%%#*}"
         value="${value%"${value##*[![:space:]]}"}"
-        export "$key"="$value"
-    done < "$SCRIPT_DIR/build-conf.txt"
-else
-    echo "ERROR: build-conf.txt not found in $SCRIPT_DIR" >&2
-    exit 1
-fi
+        value="${value#"${value%%[![:space:]]*}"}"
+        # Individual ENV variables take precedence over config values
+        local _existing
+        _existing="$(printenv "$key" 2>/dev/null)" || _existing=""
+        if [ -z "$_existing" ]; then
+            export "$key"="$value"
+        fi
+    done <<< "$config_content"
+}
+_load_config
 
 # Validate required config
-: "${IMAGE_NAME:?IMAGE_NAME must be set in build-conf.txt}"
-: "${WEBAPP_MODULE:?WEBAPP_MODULE must be set in build-conf.txt}"
-: "${TUI_TITLE:?TUI_TITLE must be set in build-conf.txt}"
+: "${IMAGE_NAME:?IMAGE_NAME must be set in config (plaintext-build.cfg or PLAINTEXT_BUILD_CONFIG env)}"
+: "${WEBAPP_MODULE:?WEBAPP_MODULE must be set in config}"
+: "${TUI_TITLE:?TUI_TITLE must be set in config}"
 
 # Auto-detect container runtime (podman on macOS, docker on Linux)
 if [ -f "/opt/homebrew/bin/podman" ]; then
@@ -55,19 +86,23 @@ ensure_podman_running() {
     echo -e "${GREEN}✓ Podman machine started${NC}"
 }
 
-# Auto-detect NAS IP: Use NAT IP when running on Zorin VM
-if [ "$(hostname)" = "plaintext-zorin" ]; then
-    NAS_HOST="192.100.0.1"
-else
-    NAS_HOST="192.168.1.224"
+# ── Derived defaults (config/env values used if set) ─────────
+# NAS_HOST: auto-detect by hostname if not configured
+if [ -z "${NAS_HOST:-}" ]; then
+    if [ "$(hostname)" = "plaintext-zorin" ]; then
+        NAS_HOST="192.100.0.1"
+    else
+        NAS_HOST="192.168.1.224"
+    fi
 fi
 
-REGISTRY="${NAS_HOST}:6666"
+REGISTRY="${NAS_HOST}:${REGISTRY_PORT:-6666}"
 VERSION_FILE="version.txt"
 VERSION_RELEASE_FILE="versionRelease.txt"
-DEPLOY_SERVER="mad@${NAS_HOST}"
+DEPLOY_SERVER="${DEPLOY_USER:-mad}@${NAS_HOST}"
 DEPLOY_PATH="${DEPLOY_PATH:-/volume1/docker/${IMAGE_NAME}}"
-COMPOSE_FILE="docker-compose.yaml"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yaml}"
+NAS_REMOTE_TEMP="${NAS_REMOTE_TEMP:-/volume1/docker/temp}"
 
 # ── Legacy color aliases (used by business logic echo statements) ─
 GREEN='\033[0;32m'
@@ -103,9 +138,6 @@ show_usage() {
     echo -e "    ${YELLOW}3${NC} = Patch version (x.x.X)"
     echo -e "  ${GREEN}./build deploy-prod${NC}        - Deploy last release to PROD"
 }
-
-# NAS remote temp path for image transfer
-NAS_REMOTE_TEMP="/volume1/docker/temp"
 
 # Function to push image to NAS
 push_to_registry() {
